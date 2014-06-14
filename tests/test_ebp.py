@@ -30,8 +30,8 @@ def test_gaussian_oracle():
     sigma1 = [10, 10]
     params1 = np.hstack([mean1, sigma1])
 
-    xx2d = np.array(np.meshgrid(np.arange(-100,100,10),
-                                np.arange(-100,100,10))).reshape(2, -1)
+    xx2d = np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                np.arange(-100, 100, 5))).reshape(2, -1)
 
     gauss2d = ebp.gaussian_kernel(xx2d, params1)
     # Oh, we're totally stuffing this ballot box:
@@ -43,15 +43,24 @@ def test_gaussian_oracle():
     npt.assert_almost_equal(theta_est, params1)
                                 
 
+def test_mixture_of_kernels():
 
-##     # Make a 2D mixture of 2 Gaussians:
-##     mean1 = [20, 20]
-##     sigma1 = [10, 10]
-##     kernel1 = ebp.gaussian_kernel(xx2d, mean1, sigma1)
-##     mean2 = [30, 40]
-##     sigma2 = [10, 50]
-##     kernel2 = ebp.gaussian_kernel(xx2d, mean2, sigma2)
-##     beta = [0.3, 0.7]
-##     signal = beta[0] * kernel1 + beta[1] * kernel2
+    xx2d = np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                np.arange(-100, 100, 5))).reshape(2, -1)
 
-##     ebp.elastic_basis_pursuit(xx2d, signal, gaussian_oracle, gaussian_kernel)
+    # Make a 2D mixture of 2 Gaussians:
+    mean1 = [20, 20]
+    sigma1 = [10, 10]
+    params1 = np.hstack([mean1, sigma1])
+    kernel1 = ebp.gaussian_kernel(xx2d, params1)
+    mean2 = [30, 40]
+    sigma2 = [10, 50]
+    params2 = np.hstack([mean2, sigma2])
+    kernel2 = ebp.gaussian_kernel(xx2d, params2)
+    betas = [0.3, 0.7]
+    signal1 = betas[0] * kernel1 + betas[1] * kernel2
+
+    signal2 = ebp.mixture_of_kernels(xx2d, betas, [params1, params2],
+                                     ebp.gaussian_kernel)
+
+    npt.assert_almost_equal(signal1, signal2)

@@ -122,9 +122,13 @@ def mixture_of_kernels(x, betas, params, kernel):
     kernel : callable
     
     """
-    out = np.zeros(len(betas), x.ravel().shape)
-    for i in xrange(out.shape[0]):
-        out[i] = np.dot(betas[i], kernel(x, params[i]))
+    betas = np.asarray(betas)
+    out = np.zeros(np.prod(x.shape[1:]))
+
+    for i in xrange(betas.shape[0]):
+        out += np.dot(betas[i], kernel(x, params[i]))
+
+    return out
 
 def kernel_err(y, x, betas, params, kernel):
     """
