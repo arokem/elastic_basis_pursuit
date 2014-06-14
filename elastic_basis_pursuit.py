@@ -144,8 +144,30 @@ def kernel_err(y, x, betas, params, kernel):
     portion
     """
     return y - mixture_of_kernels(x, betas, params, kernel)
+
     
-     
+def parameters_to_regressors(x, kernel, params):
+    """
+    Maps from parameters to regressors through the kernel function
+
+    Parameters
+    ----------
+    x : ndarray
+        Input
+    kernel : callable
+       The kernel function
+    params : list
+       The parameters for each one of the kernel functions
+    
+    """
+    # Ravel the secondary dimensions of this:
+    x = x.reshape(x.shape[0], -1)
+    regressors = np.zeros((len(params), x.shape[-1]))
+    for i, p in enumerate(params):
+        regressors[i] = kernel(x, p)
+    return regressors
+    
+    
 def elastic_basis_pursuit(x, y, oracle, func):
     """
     Elastic basis pursuit

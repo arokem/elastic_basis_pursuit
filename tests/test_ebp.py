@@ -97,3 +97,27 @@ def test_kernel_error():
         err = ebp.kernel_err(y, xx2d, betas, params, ebp.gaussian_kernel)
 
         npt.assert_almost_equal(err, np.zeros(err.shape))
+
+def test_parameters_to_regressors():
+    """
+
+    """
+
+    xx2d = np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                np.arange(-100, 100, 5)))
+    mean1 = [20, 20]
+    sigma1 = [10, 10]
+    params1 = np.hstack([mean1, sigma1])
+    mean2 = [30, 40]
+    sigma2 = [10, 50]
+    params2 = np.hstack([mean2, sigma2])
+    params = [params1, params2]
+
+    reference = np.array([ebp.gaussian_kernel(xx2d.reshape(2, -1), p)
+                          for p in params])
+
+    regressors = ebp.parameters_to_regressors(xx2d, ebp.gaussian_kernel, params)
+
+    npt.assert_almost_equal(reference, regressors)
+
+    
