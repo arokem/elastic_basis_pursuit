@@ -2,6 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import elastic_basis_pursuit as ebp
 
+
 def test_gaussian_kernel():
     xx3d = np.array(np.meshgrid(np.arange(-10,10,1),
                               np.arange(-10,10,1),
@@ -23,8 +24,10 @@ def test_gaussian_kernel():
     ratio = gauss3d[10, 10]/gauss1d
     should_be_ones = ratio / np.mean(ratio)
     npt.assert_almost_equal(should_be_ones, np.ones(should_be_ones.shape))
-    
 
+    # Test that the inputs are being checked:
+    npt.assert_raises(ValueError, ebp.gaussian_kernel, xx3d, mean3d)
+    
 def test_gaussian_oracle():
     mean1 = [20, 20]
     sigma1 = [10, 10]
