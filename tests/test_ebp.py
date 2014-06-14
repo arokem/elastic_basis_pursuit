@@ -67,3 +67,30 @@ def test_mixture_of_kernels():
                                          ebp.gaussian_kernel)
 
         npt.assert_almost_equal(signal1, signal2)
+
+def test_kernel_error():
+    """
+
+    """
+    for xx2d in [np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                      np.arange(-100, 100, 5))),
+
+                 np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                      np.arange(-100, 100, 5))).reshape(2, -1)]:
+
+        mean1 = [20, 20]
+        sigma1 = [10, 10]
+        params1 = np.hstack([mean1, sigma1])
+        mean2 = [30, 40]
+        sigma2 = [10, 50]
+        params2 = np.hstack([mean2, sigma2])
+
+        params = [params1, params2]
+        betas = [0.3, 0.7]
+        
+        y = ebp.mixture_of_kernels(xx2d, betas, params,
+                                   ebp.gaussian_kernel)
+
+        err = ebp.kernel_err(y, xx2d, betas, params, ebp.gaussian_kernel)
+
+        npt.assert_almost_equal(err, np.zeros(err.shape))
