@@ -114,10 +114,52 @@ def test_parameters_to_regressors():
     params = [params1, params2]
 
     reference = np.array([ebp.gaussian_kernel(xx2d.reshape(2, -1), p)
-                          for p in params])
+                          for p in params]).T
 
     regressors = ebp.parameters_to_regressors(xx2d, ebp.gaussian_kernel, params)
 
     npt.assert_almost_equal(reference, regressors)
 
     
+def test_solve_nnls():
+    """
+
+    """
+    regressor_params = []
+    for mean1 in range(10, 50, 10):
+        for mean2 in range(10, 50, 10):
+            for sigma1 in range(10, 50, 10):
+                for sigma2 in range(10, 50, 10):
+                    regressor_params.append([mean1, mean2, sigma1, sigma2])
+
+    mean1 = [20, 20]
+    sigma1 = [10, 10]
+    params1 = np.hstack([mean1, sigma1])
+    mean2 = [30, 40]
+    sigma2 = [10, 50]
+    params2 = np.hstack([mean2, sigma2])
+
+    params = [params1, params2]
+    betas = [0.3, 0.7]
+
+    for xx2d in [np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                      np.arange(-100, 100, 5))),
+
+                 np.array(np.meshgrid(np.arange(-100, 100, 5),
+                                      np.arange(-100, 100, 5))).reshape(2, -1)]:
+
+            y = ebp.mixture_of_kernels(xx2d, betas, params,
+                                   ebp.gaussian_kernel)
+
+
+            design, beta_hat, rnorm = ebp.solve_nnls(xx2d,
+                                                     y,
+                                                     ebp.gaussian_kernel,
+                regressor_params)
+
+            y_hat = np.dot(
+        ebp.parameters_to_regressors(xx2d,ebp.gaussian_kernel,regressor_params),
+                           beta_hat)
+
+            npt.assert_almost_equal(y.ravel(), y_hat, decimal=2)
+            

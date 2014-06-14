@@ -6,6 +6,8 @@ import numpy as np
 import numpy.linalg as nla
 import leastsqbound as lsq
 import sklearn.linear_model as lm
+import scipy.optimize as opt
+
 
 def err_func(params, x, y, func):
         """
@@ -59,8 +61,8 @@ def gaussian_kernel(x, params):
        var_covar_matrix needs to be reshaped into n-by-n 
        
     """
+    mu = np.asarray(params[:x.shape[0]])
     if len(params) == x.shape[0] * 2:
-        mu = params[:x.shape[0]]
         sigma = np.diag(params[x.shape[0]:])
     elif len(params) == x.shape[0] + x.shape[0] ** 2:
         mu = params[:x.shape[0]]
@@ -165,7 +167,7 @@ def parameters_to_regressors(x, kernel, params):
     regressors = np.zeros((len(params), x.shape[-1]))
     for i, p in enumerate(params):
         regressors[i] = kernel(x, p)
-    return regressors
+    return regressors.T
     
     
 def elastic_basis_pursuit(x, y, oracle, func):
@@ -214,3 +216,22 @@ def elastic_basis_pursuit(x, y, oracle, func):
         regressors = np.hstack(active_set)
     
 
+
+def solve_nnls(x, y, kernel, params):
+    """
+    Solve the mixture problem using NNLS
+
+    Parameters
+    ----------
+    x : ndarray
+    y : ndarray
+
+    kernel : callable
+    params : list
+
+    """
+    A = parameters_to_regressors(x, kernel, params)
+    y = y.ravel()
+    beta_hat, rnorm = opt.nnls(A, y)
+    return A, beta_hat, rnorm
+    
