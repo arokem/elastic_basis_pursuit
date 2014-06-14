@@ -123,7 +123,7 @@ def mixture_of_kernels(x, betas, params, kernel):
     
     """
     betas = np.asarray(betas)
-    out = np.zeros(np.prod(x.shape[1:]))
+    out = np.zeros(x.shape[1:])
 
     for i in xrange(betas.shape[0]):
         out += np.dot(betas[i], kernel(x, params[i]))
