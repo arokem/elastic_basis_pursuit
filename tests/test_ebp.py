@@ -161,3 +161,35 @@ def test_solve_nnls():
 
             npt.assert_almost_equal(y.ravel(), y_hat, decimal=2)
             
+
+def test_elastic_basis_pursuit():
+    """
+    
+    """
+    
+    xx2d = np.array(np.meshgrid(np.arange(0,50,1),
+                                np.arange(0,50,1)))
+    bounds = [[0,50], [0,50], [0, None], [0, None]]
+    mean1 = [20, 20]
+    sigma1 = [10, 10]
+    params1 = np.hstack([mean1, sigma1])
+
+    kernel1 = ebp.gaussian_kernel(xx2d, params1)
+    mean2 = [30, 40]
+    sigma2 = [10, 50]
+    params2 = np.hstack([mean2, sigma2])
+    kernel2 = ebp.gaussian_kernel(xx2d, params2)
+    beta = [0.3, 0.7]
+    signal = (beta[0] * kernel1 + beta[1] * kernel2).ravel()
+    initial_theta = np.hstack([np.mean(xx2d, axis=(-1, -2)), 1, 1])
+
+    theta, err, r = ebp.elastic_basis_pursuit(xx2d.reshape(-1, signal.shape[0]),
+                                              signal,
+                                              ebp.leastsq_oracle,
+                                              ebp.gaussian_kernel,
+                                              initial_theta=initial_theta,
+                                              bounds=bounds,
+                                              max_iter=1000,
+                                              beta_tol=10e-6)
+
+

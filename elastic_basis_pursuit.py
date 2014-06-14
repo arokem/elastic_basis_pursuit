@@ -85,7 +85,7 @@ def gaussian_kernel(x, params):
     return gauss
 
 
-def leastsq_oracle(x, y, func, initial, bounds=None):
+def leastsq_oracle(x, y, kernel, initial=None, bounds=None):
     """
     This is a generic oracle function that uses bounded least squares to find
     the parameters in each iteration of EBP, and requires initial parameters. 
@@ -96,13 +96,13 @@ def leastsq_oracle(x, y, func, initial, bounds=None):
         Input to the kernel function.
     y : ndarray
         Data to fit to.
-    func : callalble
+    kernel : callalble
        The kernel function to be specified by this oracle.
     initial : list/array
         initial setting for the parameters of the function. This has to be
-        something that func knows what to do with.
-    """    
-    return lsq.leastsqbound(err_func, initial, args=(x, y, func),
+        something that kernel knows what to do with.
+    """
+    return lsq.leastsqbound(err_func, initial, args=(x, y, kernel),
                             bounds=bounds)[0]
 
 
@@ -169,8 +169,37 @@ def parameters_to_regressors(x, kernel, params):
         regressors[i] = kernel(x, p)
     return regressors.T
     
+
+
+def solve_nnls(x, y, kernel=None, params=None, design=None):
+    """
+    Solve the mixture problem using NNLS
+
+    Parameters
+    ----------
+    x : ndarray
+    y : ndarray
+
+    kernel : callable
+    params : list
+
+    """
+    if design is None and (kernel is None or params is None):
+        e_s = "Need to provide either design matrix, or kernel and list of"
+        e_s += "params for generating the design matrix"
+        raise ValueError(e_s)
+
+    if design is None:
+        A = parameters_to_regressors(x, kernel, params)
+    else:
+        A = design
+    y = y.ravel()
+    beta_hat, rnorm = opt.nnls(A, y)
+    return beta_hat, rnorm
     
-def elastic_basis_pursuit(x, y, oracle, func):
+    
+def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
+                          max_iter=1000, beta_tol=10e-6):
     """
     Elastic basis pursuit
 
@@ -192,49 +221,64 @@ def elastic_basis_pursuit(x, y, oracle, func):
         The data to be fit.
 
     oracle : callable
-        This is a function that takes data (`y`) and an input function (`func`)
-        and returns another callable that when called with the i-th item in x
-        will produce something that has the dimensions of the i-th item in y.
+        This is a function that takes data (`x`/`y`) and a kernel function
+        (`kernel`) and returns the params theta for the kernel given x and
+        y. The oracle can use any optimization routine, and any cost function
 
-    func : callable
+    kernel : callable
         A skeleton for the oracle function to optimize. Must take something
         of the dimensions of x (together with params, and with args) and return
         something of the dimensions of y.  
-        
-    """    
-    r = y
 
-    # Find the first function:
-    theta0 = oracle(x, y)
-    active_set = (func(x, y, theta0))
+    initial_theta : list/array
+        The initial parameter guess
 
-    while np.sum(r**2>tol):
-
-        
-        r = active_set[-1] - y
-        
-        regressors = np.hstack(active_set)
-    
-
-
-def solve_nnls(x, y, kernel, params, design=None):
+    bounds : the bounds on 
     """
-    Solve the mixture problem using NNLS
+    # Divide this up into a fit set and a validation set. We'll stop fitting
+    # when error on the validation set starts climbing:
+    fit_x = x[:, ::2]
+    validate_x = x[:, 1::2]
+    fit_y = y[::2]
+    validate_y = y[1::2]
 
-    Parameters
-    ----------
-    x : ndarray
-    y : ndarray
+    # Initialize a bunch of empty lists to hold the state:
+    theta = []
+    est = [] 
+    design_list = []
+    r = []
+    err = [np.var(fit_y)] # Start with the assumption of 
+    err_norm = []
+    # Initialize the residuals with the fit_data:
+    r.append(fit_y)
 
-    kernel : callable
-    params : list
+    # Limit this by number of iterations
+    for i in range(max_iter):
+        theta.append(oracle(fit_x, r[-1], kernel, initial_theta,
+                            bounds=bounds))
 
-    """
-    if design is None:
-        A = parameters_to_regressors(x, kernel, params)
-    else:
-        A = design
-    y = y.ravel()
-    beta_hat, rnorm = opt.nnls(A, y)
-    return beta_hat, rnorm
-    
+        design = parameters_to_regressors(fit_x, kernel, theta)
+        beta_hat, rnorm = solve_nnls(fit_x, fit_y, design=design)
+
+        # Here comes the "elastic" bit. We exclude kernels with insignificant
+        # contributions: 
+        keep_idx = np.where(beta_hat > beta_tol)
+        # We want this to still be a list (so we can 'append'):
+        theta = list(np.array(theta)[keep_idx])
+        beta_hat = beta_hat[keep_idx]
+        design = design[:, keep_idx[0]]
+
+        # Move on with the shrunken basis set:
+        est.append(np.dot(design, beta_hat))
+        r.append(fit_y - est[-1])
+
+        # Cross-validation:
+        xval_design = parameters_to_regressors(validate_x, kernel, theta)
+        xval_est = np.dot(xval_design, beta_hat)
+        xval_r = validate_y - xval_est
+        err.append(np.dot(xval_r, xval_r))
+        # If error just grew, we bail:
+        if err[i+1] > err[i]:
+            break
+
+    return theta, err, r
