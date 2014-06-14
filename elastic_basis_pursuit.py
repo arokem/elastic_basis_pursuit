@@ -217,7 +217,7 @@ def elastic_basis_pursuit(x, y, oracle, func):
     
 
 
-def solve_nnls(x, y, kernel, params):
+def solve_nnls(x, y, kernel, params, design=None):
     """
     Solve the mixture problem using NNLS
 
@@ -230,8 +230,11 @@ def solve_nnls(x, y, kernel, params):
     params : list
 
     """
-    A = parameters_to_regressors(x, kernel, params)
+    if design is None:
+        A = parameters_to_regressors(x, kernel, params)
+    else:
+        A = design
     y = y.ravel()
     beta_hat, rnorm = opt.nnls(A, y)
-    return A, beta_hat, rnorm
+    return beta_hat, rnorm
     

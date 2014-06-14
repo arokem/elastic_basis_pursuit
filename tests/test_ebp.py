@@ -151,15 +151,13 @@ def test_solve_nnls():
             y = ebp.mixture_of_kernels(xx2d, betas, params,
                                    ebp.gaussian_kernel)
 
+            beta_hat, rnorm = ebp.solve_nnls(xx2d, y, ebp.gaussian_kernel,
+                                             regressor_params)
 
-            design, beta_hat, rnorm = ebp.solve_nnls(xx2d,
-                                                     y,
-                                                     ebp.gaussian_kernel,
-                regressor_params)
-
-            y_hat = np.dot(
-        ebp.parameters_to_regressors(xx2d,ebp.gaussian_kernel,regressor_params),
-                           beta_hat)
+            design = ebp.parameters_to_regressors(xx2d,
+                                                  ebp.gaussian_kernel,
+                                                  regressor_params)
+            y_hat = np.dot(design, beta_hat)
 
             npt.assert_almost_equal(y.ravel(), y_hat, decimal=2)
             
