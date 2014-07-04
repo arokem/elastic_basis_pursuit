@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from distutils.core import setup, Extension
+from distutils.core import setup
 
 opts = dict(name='ebp',
             packages=['ebp',
