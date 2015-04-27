@@ -163,13 +163,12 @@ def parameters_to_regressors(x, kernel, params):
     
     """
     # Ravel the secondary dimensions of this:
-    x = x.reshape(x.shape[0], -1)
+    x = x.reshape(x.shape[0], -1).squeeze()
     regressors = np.zeros((len(params), x.shape[-1]))
     for i, p in enumerate(params):
         regressors[i] = kernel(x, p)
     return regressors.T
     
-
 
 def solve_nnls(x, y, kernel=None, params=None, design=None):
     """
@@ -199,7 +198,7 @@ def solve_nnls(x, y, kernel=None, params=None, design=None):
     
     
 def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
-                          max_iter=1000, beta_tol=10e-6):
+                          max_iter=1000, beta_tol=10e-6, xval=True):
     """
     Elastic basis pursuit
 
@@ -235,10 +234,8 @@ def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
 
     bounds : the bounds on 
     """
-    # Divide this up into a fit set and a validation set. We'll stop fitting
-    # when error on the validation set starts climbing:
-    fit_x = x[:, ::2]
-    validate_x = x[:, 1::2]
+    fit_x = x[..., ::2]
+    validate_x = x[..., 1::2]
     fit_y = y[::2]
     validate_y = y[1::2]
 
@@ -247,7 +244,7 @@ def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
     est = [] 
     design_list = []
     r = []
-    err = [np.var(fit_y)] # Start with the assumption of 
+    err = [np.dot(fit_y, fit_y)] # Start with the assumption of 
     err_norm = []
     # Initialize the residuals with the fit_data:
     r.append(fit_y)
@@ -255,11 +252,9 @@ def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
     # Limit this by number of iterations
     for i in range(max_iter):
         theta.append(oracle(fit_x, r[-1], kernel, initial_theta,
-                            bounds=bounds))
-
+			    bounds=bounds))
         design = parameters_to_regressors(fit_x, kernel, theta)
         beta_hat, rnorm = solve_nnls(fit_x, fit_y, design=design)
-
         # Here comes the "elastic" bit. We exclude kernels with insignificant
         # contributions: 
         keep_idx = np.where(beta_hat > beta_tol)
@@ -267,11 +262,9 @@ def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
         theta = list(np.array(theta)[keep_idx])
         beta_hat = beta_hat[keep_idx]
         design = design[:, keep_idx[0]]
-
         # Move on with the shrunken basis set:
         est.append(np.dot(design, beta_hat))
         r.append(fit_y - est[-1])
-
         # Cross-validation:
         xval_design = parameters_to_regressors(validate_x, kernel, theta)
         xval_est = np.dot(xval_design, beta_hat)
@@ -280,5 +273,5 @@ def elastic_basis_pursuit(x, y, oracle, kernel, initial_theta=None, bounds=None,
         # If error just grew, we bail:
         if err[i+1] > err[i]:
             break
-
+	
     return theta, err, r

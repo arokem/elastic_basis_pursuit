@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.testing as npt
-import elastic_basis_pursuit as ebp
+import ebp
 
 
 def test_gaussian_kernel():

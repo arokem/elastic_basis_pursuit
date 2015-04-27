@@ -1,1 +1,1 @@
-from elastic_basis_pursuit import *
+from .elastic_basis_pursuit import *
